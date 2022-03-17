@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mlkit_text_recognition/mlkit_text_recognition.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -11,6 +15,17 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int intento = 0;
   String texto = "";
+
+  PictureDataModel? _pictureDataModel;
+
+  @override
+  void initState() {
+    _pictureDataModel = PictureDataModel();
+    _pictureDataModel!.inputClickState.add([]);
+    super.initState();
+  }
+
+  
 
   getRecognisedTextFromPath(String path) async {
     print("entre1");
@@ -46,18 +61,47 @@ class _MyHomePageState extends State<MyHomePage> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
+                StreamBuilder<List<String>>(
+                  stream: _pictureDataModel!.outputResult,
+                  builder: (BuildContext context, AsyncSnapshot<List<String>> snapshot) {
+                    return Container(
+                      width: MediaQuery.of(context).size.width,
+                      padding: const EdgeInsets.all(20.0),
+                      child: snapshot.hasData
+                          ? snapshot.data!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(20.0),
+                                  child: Image.file(
+                                    File(snapshot.data![0]),
+                                    fit: BoxFit.contain,
+                                  ),
+                                )
+                              : const SizedBox.shrink()
+                          : const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                    );
+                  },
+                ),
                 ElevatedButton(
                   onPressed: () {
                     print("onpressed");
+                    openCamera.then(
+                      (List<String> data) {
+                        getRecognisedTextFromPath(data.first);
+                        _pictureDataModel!.inputClickState.add(data);
+                      },
+                      onError: (e) {
+                        _pictureDataModel!.inputClickState.add([]);
+                      },
+                    );
                   },
-                  child: Text("tome una foto"),
+                  child: const Text("tome una foto"),
                 ),
-                SizedBox(
-                  height: 100,
+                const SizedBox(
+                  height: 10,
                 ),
-                Container(
-                  child: Text(texto + '$intento'),
-                )
+                Text(texto + '$intento'),
               ],
             ),
           ),
@@ -65,4 +109,27 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+
+
+
+  
+}
+
+class PictureDataModel {
+  final StreamController<List<String>> _streamController =
+      StreamController<List<String>>.broadcast();
+
+  Sink<List<String>> get inputClickState => _streamController;
+
+  Stream<List<String>> get outputResult =>
+      _streamController.stream.map((data) => data);
+
+  dispose() => _streamController.close();
+}
+
+
+
+Future<List<String>> get openCamera async {
+  const MethodChannel _channel = MethodChannel("take_picture_native");
+  return await _channel.invokeMethod("open_camera").then((data) =>  List<String>.from(data));
 }
