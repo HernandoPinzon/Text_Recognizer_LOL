@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:mlkit_text_recognition/mlkit_text_recognition.dart';
+import 'package:take_picture_native/take_picture_native.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -13,7 +13,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int intento = 0;
   String texto = "";
 
   PictureDataModel? _pictureDataModel;
@@ -43,7 +42,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     setState(() {
       texto = scannedText2;
-      intento++;
     });
     print('texto: $scannedText2');
   }
@@ -86,7 +84,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ElevatedButton(
                   onPressed: () {
                     print("onpressed");
-                    openCamera.then(
+                    TakePictureNative.openCamera.then(
                       (List<String> data) {
                         getRecognisedTextFromPath(data.first);
                         _pictureDataModel!.inputClickState.add(data);
@@ -101,7 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 const SizedBox(
                   height: 10,
                 ),
-                Text(texto + '$intento'),
+                Text(texto),
               ],
             ),
           ),
@@ -125,11 +123,4 @@ class PictureDataModel {
       _streamController.stream.map((data) => data);
 
   dispose() => _streamController.close();
-}
-
-
-
-Future<List<String>> get openCamera async {
-  const MethodChannel _channel = MethodChannel("take_picture_native");
-  return await _channel.invokeMethod("open_camera").then((data) =>  List<String>.from(data));
 }
